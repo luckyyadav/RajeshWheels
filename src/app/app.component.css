@@ -1,0 +1,38 @@
+.wheel-container {
+  position: relative;
+  margin: 20px;
+}
+
+.wheel {
+  width: 200px;
+  height: 200px;
+  border: 2px solid #333;
+  border-radius: 50%;
+  overflow: hidden;
+  position: relative;
+  transform-origin: center center;
+  transition: transform 3s ease-in-out;
+}
+
+.number {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5em;
+}
+
+.spinning {
+  transform: rotate(3600deg);
+}
+
+button {
+  margin-top: 10px;
+}
+
+.result {
+  font-size: 1.5em;
+  margin-top: 10px;
+}

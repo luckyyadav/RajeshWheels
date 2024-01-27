@@ -1,0 +1,230 @@
+import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+
+@Component({
+  selector: 'app-root',
+  templateUrl: './app.component.html',
+  styleUrls: ['./app.component.css'],
+})
+export class AppComponent {
+  @ViewChild('canvas', { static: true }) canvas: ElementRef;
+  private context: CanvasRenderingContext2D;
+  blinkDuration = 0;
+  private wheelColors = [
+    '#FF0000',
+    '#FFA500',
+    '#FFFF00',
+    '#008000',
+    '#0000FF',
+    '#4B0082',
+    '#EE82EE',
+    '#FFC0CB',
+    '#800000',
+    '#808000',
+    '#008080',
+    '#800080',
+  ];
+
+  private wheelNumbers = [
+    '1',
+    '2',
+    '3',
+    '4',
+    '5',
+    '6',
+    '7',
+    '8',
+    '9',
+    '10',
+    '11',
+    '12',
+  ];
+
+  public selectedNumber: string;
+  private isSpinning: boolean;
+  private rotationSpeed: number = 12;
+
+  ngOnInit() {
+    this.context = this.canvas.nativeElement.getContext('2d');
+    this.drawWheel();
+  }
+
+  drawWheel() {
+    const centerX = this.canvas.nativeElement.width / 2;
+    const centerY = this.canvas.nativeElement.height / 2;
+    const radius = Math.min(centerX, centerY) - 10;
+
+    const angle = (2 * Math.PI) / this.wheelNumbers.length;
+
+    this.context.clearRect(
+      0,
+      0,
+      this.canvas.nativeElement.width,
+      this.canvas.nativeElement.height
+    );
+
+    for (let i = 0; i < this.wheelNumbers.length; i++) {
+      const startAngle = i * angle;
+      const endAngle = (i + 1) * angle;
+
+      this.context.beginPath();
+      this.context.arc(centerX, centerY, radius, startAngle, endAngle);
+      this.context.lineTo(centerX, centerY);
+      this.context.closePath();
+
+      this.context.fillStyle = this.wheelColors[i];
+      this.context.fill();
+
+      this.context.save();
+      this.context.translate(centerX, centerY);
+      this.context.rotate(startAngle + angle / 2);
+      this.context.fillStyle = '#fff'; // Change font color to white
+      this.context.font = 'bold 40px Arial'; // Increase font size and make it bold
+      this.context.fillText(this.wheelNumbers[i], radius / 1.5 - 1, 5); // Adjust text position
+      this.context.restore();
+    }
+  }
+
+  spinWheel() {
+    this.blinkDuration = 0;
+    // Clear the selected number before starting a new spin
+    this.selectedNumber = null;
+    if (!this.isSpinning) {
+      this.isSpinning = true;
+      const randomIndex = Math.floor(Math.random() * this.wheelNumbers.length);
+      const selectedAngle =
+        (2 * Math.PI * randomIndex) / this.wheelNumbers.length;
+
+      // Set the duration for the spinning animation
+      const duration = 5000; // in milliseconds
+      const startTime = performance.now();
+
+      const animate = (currentTime: number) => {
+        const elapsedTime = currentTime - startTime;
+        const progress = elapsedTime / duration;
+
+        if (progress < 1) {
+          const easedProgress = this.easeOut(progress); // Apply easing function
+
+          const rotation =
+            selectedAngle *
+            easedProgress *
+            (1 + this.rotationSpeed * easedProgress);
+          this.drawWheelWithRotation(rotation);
+
+          // Highlight the selected number during the animation
+          this.highlightSelectedNumber(randomIndex, easedProgress);
+
+          requestAnimationFrame(animate);
+        } else {
+          // Animation complete, set the selected number and stop spinning
+          this.selectedNumber = this.wheelNumbers[randomIndex];
+          this.isSpinning = false;
+
+          // Highlight the selected number after the animation is complete
+          this.highlightSelectedNumber(randomIndex, 1); // Progress = 1 for full highlight
+        }
+      };
+
+      // Start the animation
+      requestAnimationFrame(animate);
+    }
+  }
+
+  highlightSelectedNumber(index: number, progress: number) {
+    if (this.selectedNumber !== null) {
+      const centerX = this.canvas.nativeElement.width / 2;
+      const centerY = this.canvas.nativeElement.height / 2;
+      const radius = Math.min(centerX, centerY) - 10;
+
+      const angle = (2 * Math.PI) / this.wheelNumbers.length;
+      const rotation = (2 * Math.PI * index) / this.wheelNumbers.length;
+
+      const startAngle = rotation + progress * angle * index;
+      const endAngle = rotation + progress * angle * (index + 1);
+
+      this.blinkDuration = 11111000; // in milliseconds
+      const blinkInterval = 90; // in milliseconds
+
+      const blink = (currentTime: number) => {
+        const elapsedTime = currentTime - startTime;
+
+        if (elapsedTime < this.blinkDuration) {
+          const isBlinkOn = Math.floor(elapsedTime / blinkInterval) % 2 === 0;
+
+          this.context.beginPath();
+          this.context.arc(centerX, centerY, radius, startAngle, endAngle);
+          this.context.lineTo(centerX, centerY);
+          this.context.closePath();
+
+          this.context.fillStyle = isBlinkOn
+            ? 'yellow'
+            : this.wheelColors[index];
+          this.context.fill();
+
+          this.context.save();
+          this.context.translate(centerX, centerY);
+          this.context.rotate(rotation + angle * index + angle / 2);
+          this.context.fillStyle = '#fff';
+          this.context.font = 'bold 40px Arial';
+          this.context.fillText(this.wheelNumbers[index], radius / 1.5 - 1, 5); // Adjust text position
+          this.context.restore();
+
+          requestAnimationFrame(blink);
+        }
+      };
+
+      const startTime = performance.now();
+      requestAnimationFrame(blink);
+    }
+  }
+
+  // Add an easing function (ease-out)
+  easeOut(t: number): number {
+    return 1 - Math.pow(1 - t, 5);
+  }
+
+  hexToRgb(hex: string): string {
+    // Convert hex color to RGB format
+    const bigint = parseInt(hex.slice(1), 16);
+    const r = (bigint >> 16) & 255;
+    const g = (bigint >> 8) & 255;
+    const b = bigint & 255;
+    return `${r}, ${g}, ${b}`;
+  }
+
+  drawWheelWithRotation(rotation: number) {
+    const centerX = this.canvas.nativeElement.width / 2;
+    const centerY = this.canvas.nativeElement.height / 2;
+    const radius = Math.min(centerX, centerY) - 10;
+
+    const angle = (2 * Math.PI) / this.wheelNumbers.length;
+
+    this.context.clearRect(
+      0,
+      0,
+      this.canvas.nativeElement.width,
+      this.canvas.nativeElement.height
+    );
+
+    for (let i = 0; i < this.wheelNumbers.length; i++) {
+      const startAngle = i * angle + rotation;
+      const endAngle = (i + 1) * angle + rotation;
+
+      this.context.beginPath();
+      this.context.arc(centerX, centerY, radius, startAngle, endAngle);
+      this.context.lineTo(centerX, centerY);
+      this.context.closePath();
+
+      this.context.fillStyle = this.wheelColors[i];
+      this.context.fill();
+
+      this.context.save();
+      this.context.translate(centerX, centerY);
+      this.context.rotate(startAngle + angle / 2);
+      this.context.fillStyle = '#fff';
+      this.context.font = 'bold 40px Arial';
+      this.context.fillText(this.wheelNumbers[i], radius / 1.5 - 1, 5); // Adjust text position
+      this.context.restore();
+    }
+  }
+}
